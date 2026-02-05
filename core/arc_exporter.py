@@ -234,11 +234,23 @@ class ArcDataParser:
         return folders
     
     def _build_folder_tree(self, parent_id: str) -> List[Union[Bookmark, BookmarkFolder]]:
-        """Recursively build folder tree from Arc data."""
+        """Recursively build folder tree from Arc data, preserving order."""
         children = []
         
-        for item_id, item in self.item_lookup.items():
-            if item.get("parentID") != parent_id:
+        # Get ordered children IDs from parent
+        parent_item = self.item_lookup.get(parent_id)
+        if parent_item and "childrenIds" in parent_item:
+            ordered_ids = parent_item["childrenIds"]
+        else:
+            # Fallback: collect children by parentID (unordered)
+            ordered_ids = [
+                item_id for item_id, item in self.item_lookup.items()
+                if item.get("parentID") == parent_id
+            ]
+        
+        for item_id in ordered_ids:
+            item = self.item_lookup.get(item_id)
+            if not item:
                 continue
             
             # Check if it's a bookmark

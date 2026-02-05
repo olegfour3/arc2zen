@@ -142,6 +142,37 @@ def parse_zen_bookmarks(profile_path: Path) -> List[BookmarkFolder]:
     return result
 
 
+def sort_folders_by_sibling_order(folders: List[dict], parent_id: Optional[str] = None) -> List[dict]:
+    """Sort folders by prevSiblingInfo linked list order."""
+    # Filter folders by parent
+    siblings = [f for f in folders if f.get("parentId") == parent_id]
+    if not siblings:
+        return []
+    
+    # Build map: prev_id -> folder
+    by_prev: Dict[Optional[str], dict] = {}
+    for f in siblings:
+        prev_info = f.get("prevSiblingInfo", {})
+        prev_id = prev_info.get("id") if prev_info.get("type") == "folder" else None
+        by_prev[prev_id] = f
+    
+    # Build ordered list starting from None (first element)
+    ordered = []
+    current_prev = None
+    while current_prev in by_prev:
+        folder = by_prev[current_prev]
+        ordered.append(folder)
+        current_prev = folder["id"]
+    
+    # Add any remaining folders that weren't in the chain
+    ordered_ids = {f["id"] for f in ordered}
+    for f in siblings:
+        if f["id"] not in ordered_ids:
+            ordered.append(f)
+    
+    return ordered
+
+
 def build_folder_tree(
     tabs: List[dict],
     folders: List[dict],
@@ -184,24 +215,24 @@ def build_folder_tree(
         name = folder_data.get("name", "Unnamed")
         children = folder_children.get(folder_id, [])
         
-        # Find child folders
-        for f in folders:
-            if f.get("parentId") == folder_id:
-                child_folder = build_folder(f)
-                if child_folder:
-                    children.append(child_folder)
+        # Find child folders in correct order
+        child_folders = sort_folders_by_sibling_order(folders, folder_id)
+        for f in child_folders:
+            child_folder = build_folder(f)
+            if child_folder:
+                children.append(child_folder)
         
         if not children:
             return None
         
         return BookmarkFolder(title=name, children=children)
     
-    # Add root-level folders
-    for folder in folders:
-        if folder.get("parentId") is None:
-            built = build_folder(folder)
-            if built:
-                root_items.append(built)
+    # Add root-level folders in correct order
+    root_folders = sort_folders_by_sibling_order(folders, None)
+    for folder in root_folders:
+        built = build_folder(folder)
+        if built:
+            root_items.append(built)
     
     return root_items
 

@@ -170,10 +170,18 @@ def create_tab(url: str, title: str, workspace_id: str, group_id: Optional[str] 
 
 
 def create_folder_and_group(
-    name: str, workspace_id: str, parent_id: Optional[str] = None
+    name: str,
+    workspace_id: str,
+    parent_id: Optional[str] = None,
+    prev_sibling_id: Optional[str] = None,
 ) -> Tuple[dict, dict, str]:
     """Create folder and group entries. Returns (folder, group, folder_id)."""
     folder_id = generate_id()
+
+    if prev_sibling_id:
+        prev_sibling_info = {"type": "folder", "id": prev_sibling_id}
+    else:
+        prev_sibling_info = {"type": "start", "id": None}
 
     folder = {
         "pinned": True,
@@ -183,7 +191,7 @@ def create_folder_and_group(
         "collapsed": True,
         "saveOnWindowClose": True,
         "parentId": parent_id,
-        "prevSiblingInfo": {"type": "start", "id": None},
+        "prevSiblingInfo": prev_sibling_info,
         "emptyTabIds": [],
         "userIcon": "",
         "workspaceId": workspace_id,
@@ -212,10 +220,11 @@ def process_folder(
     all_groups: List[dict],
     all_tabs: List[dict],
     child_to_parent: Dict[str, str],
-):
-    """Recursively process a folder and its contents."""
+    prev_sibling_id: Optional[str] = None,
+) -> str:
+    """Recursively process a folder and its contents. Returns folder_id."""
     folder_data, group_data, folder_id = create_folder_and_group(
-        folder.title, workspace_id, parent_folder_id
+        folder.title, workspace_id, parent_folder_id, prev_sibling_id
     )
 
     # Create empty tab for folder
@@ -229,10 +238,11 @@ def process_folder(
     if parent_folder_id:
         child_to_parent[folder_id] = parent_folder_id
 
-    # Process children
+    # Process children in order, tracking previous sibling for nested folders
+    child_prev_sibling_id = None
     for item in folder.children:
         if isinstance(item, BookmarkFolder):
-            process_folder(
+            child_prev_sibling_id = process_folder(
                 item,
                 workspace_id,
                 folder_id,
@@ -240,10 +250,13 @@ def process_folder(
                 all_groups,
                 all_tabs,
                 child_to_parent,
+                child_prev_sibling_id,
             )
         elif isinstance(item, Bookmark):
             tab = create_tab(item.url, item.title, workspace_id, folder_id)
             all_tabs.append(tab)
+    
+    return folder_id
 
 
 def propagate_empty_tab_ids(folders: List[dict], child_to_parent: Dict[str, str]):
@@ -493,9 +506,11 @@ def import_spaces_to_zen(
         
         print(f"Importing space '{space.name}' -> workspace {workspace_id[:20]}...")
         
+        # Track previous sibling for top-level folders in this workspace
+        prev_sibling_id = None
         for item in space.children:
             if isinstance(item, BookmarkFolder):
-                process_folder(
+                prev_sibling_id = process_folder(
                     item,
                     workspace_id,
                     None,
@@ -503,6 +518,7 @@ def import_spaces_to_zen(
                     all_groups,
                     all_tabs,
                     child_to_parent,
+                    prev_sibling_id,
                 )
             elif isinstance(item, Bookmark):
                 tab = create_tab(item.url, item.title, workspace_id, group_id=None)
