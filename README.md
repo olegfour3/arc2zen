@@ -95,6 +95,23 @@ Directly imports Arc bookmarks into Zen Browser.
 
 > **Note:** Zen Browser is currently available only on macOS.
 
+## Migrating Passwords (Manual)
+
+This tool does not migrate passwords (different security systems). Follow these steps manually:
+
+### Export from macOS (Arc uses iCloud Keychain)
+1. Open **Passwords** app (macOS Sequoia+) or **Keychain Access**
+2. **Passwords app:** File → Export All Passwords → Save as CSV
+3. **Keychain Access:** File → Export Items
+
+### Import to Zen
+1. Open Zen Browser
+2. Go to `about:logins`
+3. Click **⋯** (menu) → **Import from a File...**
+4. Select the CSV file
+
+> **Security:** Delete the CSV file after import — it contains plain text passwords.
+
 ## Importing HTML to Browsers
 
 ### Chrome / Chromium
