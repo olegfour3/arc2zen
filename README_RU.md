@@ -12,7 +12,7 @@
 - **Экспорт закладок Zen** в HTML (сохраняет порядок, совместим со всеми браузерами)
 - **Прямая миграция** из Arc в Zen (сохраняет структуру папок и порядок вкладок)
 - **Поддержка нескольких профилей** для Arc и Zen
-- **Кроссплатформенность**: macOS, Windows (только Arc), Linux (только Arc)
+- **Только macOS**
 
 ## Быстрый старт
 
@@ -82,18 +82,11 @@ Choose an option:
 
 ### Данные Arc Browser
 
-| Платформа | Путь |
-|-----------|------|
-| macOS | `~/Library/Application Support/Arc/StorableSidebar.json` |
-| Windows | `%LOCALAPPDATA%\Packages\TheBrowserCompany.Arc*\LocalCache\Local\Arc\StorableSidebar.json` |
+`~/Library/Application Support/Arc/StorableSidebar.json`
 
 ### Данные Zen Browser
 
-| Платформа | Путь |
-|-----------|------|
-| macOS | `~/Library/Application Support/zen/Profiles/` |
-
-> **Примечание:** Zen Browser пока доступен только на macOS.
+`~/Library/Application Support/zen/Profiles/`
 
 ## Миграция паролей (вручную)
 

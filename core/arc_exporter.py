@@ -61,20 +61,8 @@ class ArcDataReader:
     @classmethod
     def get_arc_data_path(cls) -> Path:
         """Get the path to Arc's data file based on the operating system."""
-        if os.name == "nt":
-            # Windows
-            arc_root_parent = Path(os.path.expanduser(r"~\AppData\Local\Packages"))
-            arc_root_paths = [
-                f for f in arc_root_parent.glob("*")
-                if f.name.startswith("TheBrowserCompany.Arc")
-            ]
-            if len(arc_root_paths) != 1:
-                raise ArcDataError("Arc installation not found or multiple installations detected")
-            
-            return arc_root_paths[0] / r"LocalCache\Local\Arc" / cls.FILENAME
-        else:
-            # macOS/Linux
-            return Path(os.path.expanduser("~/Library/Application Support/Arc/")) / cls.FILENAME
+        # macOS/Linux
+        return Path(os.path.expanduser("~/Library/Application Support/Arc/")) / cls.FILENAME
     
     @classmethod
     def read_data(cls) -> Dict:

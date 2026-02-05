@@ -48,13 +48,8 @@ def write_lz4_json(path: Path, data: dict):
 # ============== Zen Profile ==============
 
 def find_zen_profile() -> Optional[Path]:
-    """Find default Zen Browser profile."""
-    if sys.platform == "darwin":
-        zen_root = Path.home() / "Library" / "Application Support" / "zen" / "Profiles"
-    elif sys.platform == "win32":
-        zen_root = Path(os.environ.get("APPDATA", "")) / "zen" / "Profiles"
-    else:
-        zen_root = Path.home() / ".zen" / "Profiles"
+    """Find default Zen Browser profile (macOS only)."""
+    zen_root = Path.home() / "Library" / "Application Support" / "zen" / "Profiles"
 
     if not zen_root.exists():
         return None

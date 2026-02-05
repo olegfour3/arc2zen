@@ -13,31 +13,13 @@ from core import Colors, export_to_html, ArcDataError
 
 
 def is_zen_running() -> bool:
-    """Check if Zen Browser is running."""
-    if sys.platform == "darwin":
-        # macOS: check via pgrep
-        result = subprocess.run(
-            ["pgrep", "-f", "Zen Browser"],
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode == 0
-    elif sys.platform == "win32":
-        # Windows: check via tasklist
-        result = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq zen.exe"],
-            capture_output=True,
-            text=True,
-        )
-        return "zen.exe" in result.stdout.lower()
-    else:
-        # Linux
-        result = subprocess.run(
-            ["pgrep", "-f", "zen"],
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode == 0
+    """Check if Zen Browser is running (macOS only)."""
+    result = subprocess.run(
+        ["pgrep", "-f", "Zen Browser"],
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
 
 
 def wait_for_zen_closed():
@@ -161,8 +143,17 @@ def migrate_to_zen():
         print(f"\n{Colors.RED}Unexpected error:{Colors.RESET} {e}")
 
 
+def check_macos():
+    """Check if running on macOS, exit if not."""
+    if sys.platform != "darwin":
+        print(f"\n{Colors.RED}Error: This tool only works on macOS.{Colors.RESET}")
+        print(f"Current platform: {sys.platform}")
+        sys.exit(1)
+
+
 def main():
     """Main entry point."""
+    check_macos()
     print_header()
     
     while True:

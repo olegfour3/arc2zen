@@ -12,7 +12,7 @@ A tool for exporting bookmarks from Arc Browser and Zen Browser to HTML format, 
 - **Export Zen bookmarks** to HTML (preserves order, compatible with all browsers)
 - **Direct migration** from Arc to Zen (preserves folder structure and tab order)
 - **Multi-profile support** for Arc and Zen
-- **Cross-platform**: macOS, Windows (Arc only), Linux (Arc only)
+- **macOS only**
 
 ## Quick Start
 
@@ -82,18 +82,11 @@ Directly imports Arc bookmarks into Zen Browser.
 
 ### Arc Browser Data
 
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/Arc/StorableSidebar.json` |
-| Windows | `%LOCALAPPDATA%\Packages\TheBrowserCompany.Arc*\LocalCache\Local\Arc\StorableSidebar.json` |
+`~/Library/Application Support/Arc/StorableSidebar.json`
 
 ### Zen Browser Data
 
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/zen/Profiles/` |
-
-> **Note:** Zen Browser is currently available only on macOS.
+`~/Library/Application Support/zen/Profiles/`
 
 ## Migrating Passwords (Manual)
 
