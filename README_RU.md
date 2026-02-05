@@ -1,0 +1,159 @@
+# Arc2Zen
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Инструмент для экспорта закладок из Arc Browser и Zen Browser в HTML формат, а также прямой миграции закладок из Arc в Zen Browser.
+
+**[ENG](README.md)**
+
+## Возможности
+
+- **Экспорт закладок Arc** в HTML (совместим с Chrome, Firefox, Safari, Edge)
+- **Экспорт закладок Zen** в HTML
+- **Прямая миграция** из Arc Browser в Zen Browser (сохраняет структуру папок)
+- **Поддержка нескольких профилей** Arc Browser
+- **Кроссплатформенность**: macOS, Windows (только Arc), Linux (только Arc)
+
+## Быстрый старт
+
+```bash
+# Клонировать репозиторий
+git clone https://github.com/yourusername/arc2zen.git
+cd arc2zen
+
+# Установить зависимости (только для работы с Zen)
+pip install lz4
+
+# Запустить
+python main.py
+```
+
+## Требования
+
+- Python 3.7+
+- Пакет `lz4` (для операций с Zen Browser)
+
+```bash
+pip install lz4
+```
+
+## Использование
+
+Запустите скрипт и выберите опцию из меню:
+
+```
+============================================================
+Arc Bookmarks Tool
+============================================================
+
+Choose an option:
+
+  1. Export Arc bookmarks to HTML file
+  2. Export Zen bookmarks to HTML file
+  3. Migrate Arc bookmarks to Zen Browser
+
+  0. Exit
+```
+
+### Опция 1: Экспорт закладок Arc
+
+Экспортирует все закреплённые закладки из Arc Browser в стандартный HTML файл.
+
+- Автоматическое имя файла с датой или своё имя
+
+### Опция 2: Экспорт закладок Zen
+
+Экспортирует все закреплённые вкладки из Zen Browser в HTML формат.
+
+- Сохраняет структуру воркспейсов как папки
+- Сохраняет иерархию папок
+
+### Опция 3: Миграция Arc в Zen
+
+Напрямую импортирует закладки Arc в Zen Browser.
+
+**Важно:**
+- Zen Browser должен быть **закрыт** перед миграцией
+- Скрипт автоматически проверяет, запущен ли Zen
+- Создаёт резервные копии перед изменениями
+- Требует соответствующие воркспейсы в Zen (предложит создать отсутствующие)
+
+## Расположение файлов
+
+### Данные Arc Browser
+
+| Платформа | Путь |
+|-----------|------|
+| macOS | `~/Library/Application Support/Arc/StorableSidebar.json` |
+| Windows | `%LOCALAPPDATA%\Packages\TheBrowserCompany.Arc*\LocalCache\Local\Arc\StorableSidebar.json` |
+
+### Данные Zen Browser
+
+| Платформа | Путь |
+|-----------|------|
+| macOS | `~/Library/Application Support/zen/Profiles/` |
+
+> **Примечание:** Zen Browser пока доступен только на macOS.
+
+## Импорт HTML в браузеры
+
+### Chrome / Chromium
+1. Откройте `chrome://bookmarks/`
+2. Нажмите ⋮ → "Импорт закладок"
+3. Выберите HTML файл
+
+### Firefox
+1. Нажмите `Ctrl+Shift+B` (Менеджер закладок)
+2. "Импорт и резервные копии" → "Импорт закладок из HTML"
+
+### Safari
+1. Файл → "Импортировать из" → "HTML-файла закладок"
+
+### Edge
+1. Нажмите ⋯ → "Избранное" → "Управление избранным"
+2. Нажмите ⋯ → "Импорт избранного" → "HTML-файл закладок"
+
+## Структура проекта
+
+```
+arc2zen/
+├── main.py              # Точка входа
+├── core/
+│   ├── __init__.py
+│   ├── models.py        # Классы данных
+│   ├── arc_exporter.py  # Операции с Arc Browser
+│   ├── zen_exporter.py  # Экспорт Zen в HTML
+│   └── zen_importer.py  # Миграция Arc в Zen
+├── README.md
+├── README_RU.md
+└── LICENSE
+```
+
+## Решение проблем
+
+### "File not found" для Arc
+- Убедитесь, что Arc Browser установлен и был запущен хотя бы раз
+
+### "Zen Browser profile not found"
+- Убедитесь, что Zen Browser установлен и был запущен хотя бы раз
+
+### "lz4 module required"
+```bash
+pip install lz4
+```
+
+### Отсутствуют закладки после миграции
+- Мигрируются только **закреплённые** вкладки
+- Незакреплённые вкладки не включаются
+
+## Вклад в проект
+
+Приветствуются любые предложения! Создавайте issues или pull requests.
+
+## Поддержка
+
+Если проект оказался полезен, поставьте ⭐ звезду!
+
+## Лицензия
+
+Проект распространяется под лицензией [MIT](LICENSE).
