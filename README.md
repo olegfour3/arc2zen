@@ -9,9 +9,9 @@ A tool for exporting bookmarks from Arc Browser and Zen Browser to HTML format, 
 ## Features
 
 - **Export Arc bookmarks** to HTML (compatible with Chrome, Firefox, Safari, Edge)
-- **Export Zen bookmarks** to HTML
-- **Direct migration** from Arc Browser to Zen Browser (preserves folder structure)
-- **Multi-profile support** for Arc Browser
+- **Export Zen bookmarks** to HTML (compatible with Chrome, Firefox, Safari, Edge)
+- **Direct migration** from Arc to Zen (preserves folder structure)
+- **Multi-profile support** for Arc and Zen
 - **Cross-platform**: macOS, Windows (Arc only), Linux (Arc only)
 
 ## Quick Start
