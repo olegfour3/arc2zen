@@ -8,7 +8,6 @@ Zen Browser must be CLOSED before running this script!
 
 import json
 import os
-import random
 import shutil
 import sys
 import uuid
@@ -66,11 +65,19 @@ def find_zen_profile() -> Optional[Path]:
 
 # ============== ID Generation ==============
 
+_id_counter = 0
+
+
 def generate_id() -> str:
-    """Generate unique ID in Zen format: timestamp-random."""
+    """Generate unique ID in Zen format: timestamp-counter.
+    
+    Uses monotonic counter to guarantee uniqueness even when
+    hundreds of IDs are generated within the same millisecond.
+    """
+    global _id_counter
+    _id_counter += 1
     ts = int(datetime.now().timestamp() * 1000)
-    rand = random.randint(0, 99)
-    return f"{ts}-{rand}"
+    return f"{ts}-{_id_counter}"
 
 
 # ============== Tab/Folder Creation ==============
