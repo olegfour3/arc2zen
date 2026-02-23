@@ -80,21 +80,88 @@ def get_zen_workspaces(profile_path: Path) -> Dict[str, str]:
     return workspaces
 
 
+def _tab_to_bookmark(tab: dict) -> Optional[Bookmark]:
+    """Convert a Zen tab dict to Bookmark. Returns None if invalid."""
+    entries = tab.get("entries", [])
+    if not entries:
+        return None
+    entry = entries[-1]
+    url = entry.get("url", "")
+    title = (
+        entry.get("title", "")
+        or tab.get("_zenPinnedInitialState", {}).get("entry", {}).get("title", "")
+    )
+    if not url or url == "about:blank":
+        return None
+    return Bookmark(title=title or url, url=url)
+
+
+def _collect_essentials_by_workspace(
+    tabs: List[dict],
+    spaces: List[dict],
+) -> Dict[str, List[Bookmark]]:
+    """
+    Collect essentials grouped by workspace uuid.
+    
+    Essentials with zenWorkspace set go to that workspace.
+    Essentials with zenWorkspace=None are matched to workspaces
+    by userContextId == containerTabId (profile-based binding).
+    
+    Returns {ws_uuid: [bookmarks]}.
+    """
+    # Build containerTabId -> [ws_uuid] mapping
+    container_to_ws: Dict[int, List[str]] = {}
+    for s in spaces:
+        ct_id = s.get("containerTabId", 0)
+        ws_uuid = s.get("uuid", "")
+        if ws_uuid:
+            container_to_ws.setdefault(ct_id, []).append(ws_uuid)
+    
+    ws_ess: Dict[str, List[Bookmark]] = {}
+    
+    for tab in tabs:
+        if not isinstance(tab, dict):
+            continue
+        if not tab.get("pinned") or not tab.get("zenEssential"):
+            continue
+        if tab.get("zenIsEmpty"):
+            continue
+        
+        bm = _tab_to_bookmark(tab)
+        if not bm:
+            continue
+        
+        ws_id = tab.get("zenWorkspace")
+        if ws_id:
+            ws_ess.setdefault(ws_id, []).append(bm)
+        else:
+            # Match by userContextId -> containerTabId
+            ctx_id = tab.get("userContextId", 0)
+            target_ws_ids = container_to_ws.get(ctx_id, [])
+            for target_ws in target_ws_ids:
+                ws_ess.setdefault(target_ws, []).append(bm)
+    
+    return ws_ess
+
+
 def parse_zen_bookmarks(profile_path: Path) -> List[BookmarkFolder]:
     """
     Parse Zen Browser data and return as list of BookmarkFolder.
-    Each workspace becomes a top-level folder.
+    Each workspace becomes a top-level folder with its essentials inside.
     """
     data = get_zen_data(profile_path)
     workspaces = get_zen_workspaces(profile_path)
     
     tabs = data.get("tabs", [])
     folders = data.get("folders", [])
+    spaces_data = data.get("spaces", [])
     
-    # Build folder lookup: {folder_id: folder_data}
     folder_lookup = {f["id"]: f for f in folders if isinstance(f, dict) and "id" in f}
     
-    # Group tabs and folders by workspace
+    # Collect essentials matched to workspaces by profile
+    ws_essentials = _collect_essentials_by_workspace(tabs, spaces_data)
+    
+    # Group non-essential tabs and folders by workspace
     workspace_tabs: Dict[str, List[dict]] = {}
     workspace_folders: Dict[str, List[dict]] = {}
     
@@ -105,24 +172,22 @@ def parse_zen_bookmarks(profile_path: Path) -> List[BookmarkFolder]:
             continue
         if tab.get("zenIsEmpty"):
             continue
+        if tab.get("zenEssential"):
+            continue
         
         ws_id = tab.get("zenWorkspace") or "default"
-        if ws_id not in workspace_tabs:
-            workspace_tabs[ws_id] = []
-        workspace_tabs[ws_id].append(tab)
+        workspace_tabs.setdefault(ws_id, []).append(tab)
     
     for folder in folders:
         if not isinstance(folder, dict):
             continue
         ws_id = folder.get("workspaceId") or "default"
-        if ws_id not in workspace_folders:
-            workspace_folders[ws_id] = []
-        workspace_folders[ws_id].append(folder)
+        workspace_folders.setdefault(ws_id, []).append(folder)
     
-    # Build bookmark tree for each workspace
     result = []
     
     all_workspace_ids = set(workspace_tabs.keys()) | set(workspace_folders.keys())
+    all_workspace_ids |= set(ws_essentials.keys())
     
     for ws_id in all_workspace_ids:
         ws_name = workspaces.get(ws_id, f"Workspace {(ws_id or 'unknown')[:8]}")
@@ -130,6 +195,11 @@ def parse_zen_bookmarks(profile_path: Path) -> List[BookmarkFolder]:
         ws_folders = workspace_folders.get(ws_id, [])
         
         children = build_folder_tree(ws_tabs, ws_folders, folder_lookup)
+        
+        ess_items = ws_essentials.get(ws_id, [])
+        if ess_items:
+            ess_folder = BookmarkFolder(title="Essentials", children=ess_items)
+            children.insert(0, ess_folder)
         
         if children:
             result.append(BookmarkFolder(title=ws_name, children=children))

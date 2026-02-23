@@ -122,15 +122,16 @@ class ArcDataParser:
             # Create lookup dictionary for items in this container
             self.item_lookup = {item["id"]: item for item in items if isinstance(item, dict)}
             
-            # Convert spaces to folders for this container
-            container_folders = self._convert_spaces_to_folders(spaces)
+            # Parse favorites per profile
+            favorites_by_profile = self._parse_favorites(container)
+            
+            # Convert spaces to folders, injecting matching favorites
+            container_folders = self._convert_spaces_to_folders(spaces, favorites_by_profile)
             
             # Add container identifier if we have multiple containers with data
             if len([c for c in containers if isinstance(c, dict) and "spaces" in c and "items" in c]) > 1:
                 if container_folders:
-                    # Wrap all folders from this container in a parent folder
                     container_name = f"Profile {container_index + 1}"
-                    # Check if container has any identifying info
                     if "global" in container:
                         container_name = "Main Profile"
                     elif hasattr(container, 'profile') or any('profile' in str(space) for space in container.get("spaces", [])):
@@ -139,13 +140,53 @@ class ArcDataParser:
                     parent_folder = BookmarkFolder(title=container_name, children=container_folders)
                     all_folders.append(parent_folder)
             else:
-                # Single container, add folders directly
                 all_folders.extend(container_folders)
         
         if not all_folders:
             logging.warning("No bookmark data found in any container")
         
         return all_folders
+    
+    def _parse_favorites(self, container: Dict) -> Dict[str, BookmarkFolder]:
+        """Parse favorites (top apps) per profile from Arc container.
+        
+        Returns {profile_key: BookmarkFolder} where profile_key matches
+        the space's profile_key (e.g. "default", "Profile 1").
+        """
+        top_ids = container.get("topAppsContainerIDs", [])
+        result: Dict[str, BookmarkFolder] = {}
+        
+        for i, entry in enumerate(top_ids):
+            if not isinstance(entry, dict) or i + 1 >= len(top_ids):
+                continue
+            
+            profile_key = self._extract_profile_key(entry)
+            container_id = str(top_ids[i + 1])
+            children = self._build_folder_tree(container_id)
+            
+            if children:
+                logging.debug(f"Favorites [{profile_key}]: {self._count_bookmarks(children)} bookmarks")
+                result[profile_key] = BookmarkFolder(title="Favorites", children=children)
+        
+        return result
+    
+    @staticmethod
+    def _extract_profile_key(profile_dict: Dict) -> str:
+        """Extract a comparable key from a profile dict.
+        
+        Profile dicts look like:
+          {"default": true}
+          {"custom": {"_0": {"directoryBasename": "Profile 1", ...}}}
+        """
+        if "default" in profile_dict:
+            return "default"
+        if "custom" in profile_dict:
+            custom = profile_dict["custom"]
+            if isinstance(custom, dict):
+                for val in custom.values():
+                    if isinstance(val, dict) and "directoryBasename" in val:
+                        return val["directoryBasename"]
+        return "default"
     
     def _parse_spaces(self, spaces_data: List) -> List[Space]:
         """Parse spaces from Arc data."""
@@ -155,25 +196,24 @@ class ArcDataParser:
         unnamed_counter = 1
         
         for space_data in spaces_data:
-            # Skip string entries (they might be space IDs or references)
             if not isinstance(space_data, dict):
                 logging.debug(f"Skipping non-dict space entry: {space_data}")
                 continue
             
-            # Skip spaces without the required structure
             if "newContainerIDs" not in space_data:
                 logging.debug(f"Skipping space without newContainerIDs: {space_data.get('id', 'unknown')}")
                 continue
                 
-            # Get space title
             title = space_data.get("title", f"Space {unnamed_counter}")
             if "title" not in space_data:
                 unnamed_counter += 1
             
-            # Parse container IDs to find pinned/unpinned status
+            # Extract profile key for favorites matching
+            profile_data = space_data.get("profile", {})
+            profile_key = self._extract_profile_key(profile_data) if profile_data else "default"
+            
             containers = space_data.get("newContainerIDs", [])
             
-            # Process all containers in this space (both pinned and unpinned)
             for i, container in enumerate(containers):
                 if isinstance(container, dict) and i + 1 < len(containers):
                     container_id = str(containers[i + 1])
@@ -182,30 +222,45 @@ class ArcDataParser:
                     spaces.append(Space(
                         name=title,
                         container_id=container_id,
-                        is_pinned=is_pinned
+                        is_pinned=is_pinned,
+                        profile_key=profile_key,
                     ))
         
         logging.debug(f"Found {len(spaces)} valid spaces")
         return spaces
     
-    def _convert_spaces_to_folders(self, spaces: List[Space]) -> List[BookmarkFolder]:
-        """Convert Arc spaces to bookmark folders."""
+    def _convert_spaces_to_folders(
+        self,
+        spaces: List[Space],
+        favorites_by_profile: Optional[Dict[str, BookmarkFolder]] = None,
+    ) -> List[BookmarkFolder]:
+        """Convert Arc spaces to bookmark folders, injecting matching favorites."""
         if not spaces:
             return []
             
         logging.info("Converting spaces to bookmark folders...")
         
+        if favorites_by_profile is None:
+            favorites_by_profile = {}
+        
         folders = []
         total_bookmarks = 0
         
-        # Process ALL spaces or only pinned ones based on settings
         for space in spaces:
             if not self.include_unpinned and not space.is_pinned:
                 continue
                 
             children = self._build_folder_tree(space.container_id)
             
-            # Only create folder if it has content
+            # Inject matching favorites for this space's profile
+            fav_folder = favorites_by_profile.get(space.profile_key)
+            if fav_folder:
+                fav_copy = BookmarkFolder(
+                    title=fav_folder.title,
+                    children=list(fav_folder.children),
+                )
+                children.insert(0, fav_copy)
+            
             if children:
                 folder_title = space.name
                 if not space.is_pinned:
@@ -214,7 +269,6 @@ class ArcDataParser:
                 folder = BookmarkFolder(title=folder_title, children=children)
                 folders.append(folder)
                 
-                # Count bookmarks for logging
                 bookmark_count = self._count_bookmarks(children)
                 total_bookmarks += bookmark_count
                 logging.debug(f"Space '{space.name}': {bookmark_count} bookmarks")

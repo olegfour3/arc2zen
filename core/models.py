@@ -33,3 +33,4 @@ class Space:
     name: str
     container_id: str
     is_pinned: bool
+    profile_key: str = "default"
