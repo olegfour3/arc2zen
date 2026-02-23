@@ -16,26 +16,31 @@ A tool for exporting bookmarks from Arc Browser and Zen Browser to HTML format, 
 
 ## Quick Start
 
+### With uv (recommended)
+
 ```bash
-# Clone the repository
 git clone https://github.com/yourusername/arc2zen.git
 cd arc2zen
+uv run main.py
+```
 
-# Install dependencies (only needed for Zen operations)
+`uv` will automatically create a virtual environment and install dependencies.
+
+### With pip
+
+```bash
+git clone https://github.com/yourusername/arc2zen.git
+cd arc2zen
 pip install lz4
-
-# Run the tool
 python main.py
 ```
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.10+
 - `lz4` package (for Zen Browser operations)
 
-```bash
-pip install lz4
-```
+When using `uv`, dependencies are installed automatically.
 
 ## Usage
 
@@ -128,6 +133,7 @@ This tool does not migrate passwords (different security systems). Follow these 
 ```
 arc2zen/
 ├── main.py              # Main entry point
+├── pyproject.toml       # Project config and dependencies
 ├── core/
 │   ├── __init__.py
 │   ├── models.py        # Data classes
@@ -149,6 +155,8 @@ arc2zen/
 
 ### "lz4 module required"
 ```bash
+uv run main.py   # installs automatically
+# or
 pip install lz4
 ```
 

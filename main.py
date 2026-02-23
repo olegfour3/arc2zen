@@ -204,15 +204,19 @@ def export_bookmarks():
     print("-" * 60)
     
     output_input = input("\nOutput filename (Enter for auto): ").strip()
+    split_input = input("Split by spaces into separate files? (y/N): ").strip().lower()
     
     if output_input:
         output_path = Path(output_input)
     else:
         output_path = None
     
+    split_by_space = split_input in ("y", "yes")
+    
     try:
         bookmarks, folders = export_to_html(
             output_path=output_path,
+            split_by_space=split_by_space,
             verbose=False,
             silent=False,
         )
@@ -235,17 +239,22 @@ def export_zen_bookmarks():
     print("Export Zen to HTML")
     print("-" * 60)
     
-    # Ask for output filename
-    output_input = input(f"\nOutput filename (Enter for auto): ").strip()
+    output_input = input("\nOutput filename (Enter for auto): ").strip()
+    split_input = input("Split by workspaces into separate files? (y/N): ").strip().lower()
     
     if output_input:
         output_path = Path(output_input)
     else:
         output_path = None
     
+    split_by_space = split_input in ("y", "yes")
+    
     try:
         from core import export_zen_to_html
-        bookmarks, folders = export_zen_to_html(output_path=output_path)
+        bookmarks, folders = export_zen_to_html(
+            output_path=output_path,
+            split_by_space=split_by_space,
+        )
         print()
         print(f"{Colors.GREEN}Export completed!{Colors.RESET}")
         print(f"  Bookmarks: {bookmarks}")

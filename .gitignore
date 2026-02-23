@@ -22,6 +22,9 @@ build/
 .DS_Store
 Thumbs.db
 
+# uv
+uv.lock
+
 # Project specific
 *.html
 *.backup_*

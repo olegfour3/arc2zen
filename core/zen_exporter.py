@@ -15,7 +15,7 @@ except ImportError:
     sys.exit(1)
 
 from .models import Bookmark, BookmarkFolder
-from .arc_exporter import HTMLExporter
+from .arc_exporter import HTMLExporter, sanitize_filename, _get_base_and_ext
 
 
 def read_lz4_json(path: Path) -> dict:
@@ -106,7 +106,7 @@ def parse_zen_bookmarks(profile_path: Path) -> List[BookmarkFolder]:
         if tab.get("zenIsEmpty"):
             continue
         
-        ws_id = tab.get("zenWorkspace", "default")
+        ws_id = tab.get("zenWorkspace") or "default"
         if ws_id not in workspace_tabs:
             workspace_tabs[ws_id] = []
         workspace_tabs[ws_id].append(tab)
@@ -114,7 +114,7 @@ def parse_zen_bookmarks(profile_path: Path) -> List[BookmarkFolder]:
     for folder in folders:
         if not isinstance(folder, dict):
             continue
-        ws_id = folder.get("workspaceId", "default")
+        ws_id = folder.get("workspaceId") or "default"
         if ws_id not in workspace_folders:
             workspace_folders[ws_id] = []
         workspace_folders[ws_id].append(folder)
@@ -125,7 +125,7 @@ def parse_zen_bookmarks(profile_path: Path) -> List[BookmarkFolder]:
     all_workspace_ids = set(workspace_tabs.keys()) | set(workspace_folders.keys())
     
     for ws_id in all_workspace_ids:
-        ws_name = workspaces.get(ws_id, f"Workspace {ws_id[:8]}")
+        ws_name = workspaces.get(ws_id, f"Workspace {(ws_id or 'unknown')[:8]}")
         ws_tabs = workspace_tabs.get(ws_id, [])
         ws_folders = workspace_folders.get(ws_id, [])
         
@@ -147,7 +147,7 @@ def sort_folders_by_sibling_order(folders: List[dict], parent_id: Optional[str] 
     # Build map: prev_id -> folder
     by_prev: Dict[Optional[str], dict] = {}
     for f in siblings:
-        prev_info = f.get("prevSiblingInfo", {})
+        prev_info = f.get("prevSiblingInfo") or {}
         prev_id = prev_info.get("id") if prev_info.get("type") == "folder" else None
         by_prev[prev_id] = f
     
@@ -253,9 +253,15 @@ def count_items(folders: List[BookmarkFolder]) -> Tuple[int, int]:
     return total_bm, total_fl
 
 
-def export_zen_to_html(output_path: Optional[Path] = None) -> Tuple[int, int]:
+def export_zen_to_html(
+    output_path: Optional[Path] = None,
+    split_by_space: bool = False,
+) -> Tuple[int, int]:
     """
-    Export Zen Browser bookmarks to HTML file.
+    Export Zen Browser bookmarks to HTML file(s).
+    
+    Args:
+        split_by_space: If True, export each workspace into a separate file.
     
     Returns:
         Tuple of (total_bookmarks, total_folders)
@@ -275,12 +281,34 @@ def export_zen_to_html(output_path: Optional[Path] = None) -> Tuple[int, int]:
         print("No bookmarks found in Zen Browser")
         return 0, 0
     
-    # Export to HTML
     print("Converting to HTML...")
+    
+    if split_by_space and len(folders) > 1:
+        base, ext = _get_base_and_ext(output_path, "zen_bookmarks")
+        total_bookmarks = 0
+        total_folders = 0
+        
+        for folder in folders:
+            safe_name = sanitize_filename(folder.title)
+            file_path = Path(f"{base}_{safe_name}{ext}")
+            
+            exporter = HTMLExporter([folder])
+            html_content = exporter.export()
+            
+            with file_path.open("w", encoding="utf-8") as f:
+                f.write(html_content)
+            
+            bm, fl = count_items([folder])
+            total_bookmarks += bm
+            total_folders += fl
+            print(f"  {file_path.name}: {bm} bookmarks")
+        
+        return total_bookmarks, total_folders
+    
+    # Single file export
     exporter = HTMLExporter(folders)
     html_content = exporter.export()
     
-    # Write output
     if output_path is None:
         current_date = datetime.now().strftime("%Y_%m_%d")
         output_path = Path(f"zen_bookmarks_{current_date}.html")
@@ -290,7 +318,6 @@ def export_zen_to_html(output_path: Optional[Path] = None) -> Tuple[int, int]:
     
     print(f"Saved to: {output_path}")
     
-    # Count totals
     total_bookmarks, total_folders = count_items(folders)
     
     return total_bookmarks, total_folders

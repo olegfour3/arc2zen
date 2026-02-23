@@ -4,6 +4,7 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -321,6 +322,13 @@ class HTMLExporter:
                    .replace('"', "&quot;"))
 
 
+def sanitize_filename(name: str) -> str:
+    """Sanitize a string for use in a filename."""
+    name = re.sub(r'[\\/*?:"<>|]', '_', name)
+    name = name.strip('. ')
+    return name or "unnamed"
+
+
 def setup_logging(verbose: bool = False, silent: bool = False):
     """Configure logging with custom formatting."""
     if silent:
@@ -334,14 +342,28 @@ def setup_logging(verbose: bool = False, silent: bool = False):
     logging.basicConfig(level=level, handlers=[handler])
 
 
+def _get_base_and_ext(output_path: Optional[Path], prefix: str) -> Tuple[Path, str]:
+    """Get base path (without extension) and extension for file naming."""
+    if output_path is None:
+        current_date = datetime.now().strftime("%Y_%m_%d")
+        return Path(f"{prefix}_{current_date}"), ".html"
+    stem = output_path.stem
+    ext = output_path.suffix or ".html"
+    return output_path.parent / stem, ext
+
+
 def export_to_html(
     output_path: Optional[Path] = None,
     include_unpinned: bool = False,
+    split_by_space: bool = False,
     verbose: bool = False,
     silent: bool = False,
 ) -> Tuple[int, int]:
     """
-    Export Arc bookmarks to HTML file.
+    Export Arc bookmarks to HTML file(s).
+    
+    Args:
+        split_by_space: If True, export each space into a separate file.
     
     Returns:
         Tuple of (total_bookmarks, total_folders)
@@ -353,11 +375,32 @@ def export_to_html(
     parser = ArcDataParser(data, include_unpinned=include_unpinned)
     folders = parser.parse()
     
-    # Export to HTML
+    if split_by_space and len(folders) > 1:
+        base, ext = _get_base_and_ext(output_path, "arc_bookmarks")
+        total_bookmarks = 0
+        total_folders = 0
+        
+        for folder in folders:
+            safe_name = sanitize_filename(folder.title)
+            file_path = Path(f"{base}_{safe_name}{ext}")
+            
+            exporter = HTMLExporter([folder])
+            html_content = exporter.export()
+            
+            with file_path.open("w", encoding="utf-8") as f:
+                f.write(html_content)
+            
+            bm_count = parser._count_bookmarks(folder.children)
+            total_bookmarks += bm_count
+            total_folders += 1
+            print(f"  {file_path.name}: {bm_count} bookmarks")
+        
+        return total_bookmarks, total_folders
+    
+    # Single file export
     exporter = HTMLExporter(folders)
     html_content = exporter.export()
     
-    # Write output
     if output_path is None:
         current_date = datetime.now().strftime("%Y_%m_%d")
         output_path = Path(f"arc_bookmarks_{current_date}.html")
@@ -367,7 +410,6 @@ def export_to_html(
     
     logging.info(f"Export completed: {output_path}")
     
-    # Count totals
     total_bookmarks = sum(parser._count_bookmarks(f.children) for f in folders)
     total_folders = len(folders)
     

@@ -16,26 +16,31 @@
 
 ## Быстрый старт
 
+### С uv (рекомендуется)
+
 ```bash
-# Клонировать репозиторий
 git clone https://github.com/yourusername/arc2zen.git
 cd arc2zen
+uv run main.py
+```
 
-# Установить зависимости (только для работы с Zen)
+`uv` автоматически создаст виртуальное окружение и установит зависимости.
+
+### С pip
+
+```bash
+git clone https://github.com/yourusername/arc2zen.git
+cd arc2zen
 pip install lz4
-
-# Запустить
 python main.py
 ```
 
 ## Требования
 
-- Python 3.7+
+- Python 3.10+
 - Пакет `lz4` (для операций с Zen Browser)
 
-```bash
-pip install lz4
-```
+При использовании `uv` зависимости устанавливаются автоматически.
 
 ## Использование
 
@@ -128,6 +133,7 @@ Choose an option:
 ```
 arc2zen/
 ├── main.py              # Точка входа
+├── pyproject.toml       # Конфигурация проекта и зависимости
 ├── core/
 │   ├── __init__.py
 │   ├── models.py        # Классы данных
@@ -149,6 +155,8 @@ arc2zen/
 
 ### "lz4 module required"
 ```bash
+uv run main.py   # автоматически установит
+# или
 pip install lz4
 ```
 
